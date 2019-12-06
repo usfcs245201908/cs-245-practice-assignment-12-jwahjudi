@@ -1,4 +1,8 @@
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.util.ArrayList;
+import java.util.Random;
 
 public class Hashtable {
     class HashNode{
@@ -12,22 +16,25 @@ public class Hashtable {
         }
     }
     ArrayList<HashNode> bucket;
-    double LOAD_THRESHOLD = 0.5;
+    double LOAD_THRESHOLD = 0.75;
     int entries = 0;
     public Hashtable(){
         bucket = new ArrayList<HashNode>();
-        for(int i = 0; i < 5; i++)
+        for(int i = 0; i < 314521; i++)
             bucket.add(null);
     }
 
-    public HashNode getHead(String key){
-        return bucket.get(key.hashCode()%bucket.size());
+    public int getHead(String key){
+        return Math.abs(key.hashCode()%bucket.size());
     }
 
     public boolean containsKey(String key){
-        HashNode head = getHead(key);
+        HashNode head = bucket.get(getHead(key));
         if(head == null)
+        {
             return false;
+        }
+
         while(head!=null)
         {
             if(head.key == key)
@@ -39,7 +46,7 @@ public class Hashtable {
     }
 
     public String get(String key){
-        HashNode head = getHead(key);
+        HashNode head = bucket.get(getHead(key));
         if(head == null)
             return null;
         while(head!=null)
@@ -53,37 +60,45 @@ public class Hashtable {
     }
 
     public void put(String key, String value){
-        HashNode head = getHead(key);
-        if(head == null)
-        {
-            bucket.set(key.hashCode()%bucket.size(), new HashNode(key,value));
+        HashNode head = bucket.get(getHead(key));
+        if(head == null){
+            bucket.set(getHead(key), new HashNode(key,value));
             entries++;
         }
         else{
-            while(head.key != key)
+            while(head.next != null && head.key != key)
                 head = head.next;
             if(head.key == key)
                 head.value = value;
-            else
-            {
+            else{
                 HashNode node = new HashNode(key,value);
-                node.next = getHead(key);
-                bucket.set(key.hashCode()%bucket.size(), new HashNode(key,value));
+                node.next = bucket.get(getHead(key));
+                bucket.set(getHead(key), node);
                 entries++;
             }
         }
         if((entries * 1.0)/bucket.size() == LOAD_THRESHOLD){
-            ArrayList<HashNode>newBucket = new ArrayList<>(bucket.size()*2);
-            bucket = newBucket;
+            ArrayList<HashNode>temp = bucket;
+            int prev_size = bucket.size();
+            bucket = new ArrayList<>(prev_size*2);
+            for(int i = 0; i < prev_size*2; i++)
+                bucket.add(null);
+            for(int j = 0; j < temp.size(); j++){
+                HashNode check = temp.get(j);
+                while(check != null){
+                    put(check.key, check.value);
+                    check = check.next;
+                }
+            }
         }
     }
 
     public String remove(String key) throws Exception{
-        HashNode head = bucket.get(key.hashCode()%bucket.size());
+        HashNode head = bucket.get(getHead(key));
         if(head != null){
             if(head.key == key)
             {
-                bucket.set(key.hashCode()%bucket.size(), head.next);
+                bucket.set(getHead(key), head.next);
                 return head.value;
             }
             else{
@@ -104,12 +119,4 @@ public class Hashtable {
         }
         throw new Exception();
     }
-
-    public static void main(String[] args){
-        Hashtable table = new Hashtable();
-        table.put("1", "hello");
-        System.out.println(table.containsKey("1"));
-
-    }
-
 }
